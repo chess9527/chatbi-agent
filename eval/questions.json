@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "question": "平台目前一共有多少注册用户？",
+    "gold_sql": "SELECT COUNT(*) FROM users"
+  },
+  {
+    "id": 2,
+    "question": "每个城市的用户数量分别是多少，按数量从高到低排列？",
+    "gold_sql": "SELECT city, COUNT(*) AS user_count FROM users GROUP BY city ORDER BY user_count DESC"
+  },
+  {
+    "id": 3,
+    "question": "2025年5月的订单总数是多少？",
+    "gold_sql": "SELECT COUNT(*) FROM orders WHERE order_date >= '2025-05-01' AND order_date < '2025-06-01'"
+  },
+  {
+    "id": 4,
+    "question": "哪个商品类目的销售额最高？",
+    "gold_sql": "SELECT p.category, ROUND(SUM(oi.quantity * oi.unit_price), 2) AS gmv FROM order_items oi JOIN products p ON oi.product_id = p.id GROUP BY p.category ORDER BY gmv DESC LIMIT 1"
+  },
+  {
+    "id": 5,
+    "question": "每个月的订单量趋势是怎样的？",
+    "gold_sql": "SELECT substr(order_date, 1, 7) AS month, COUNT(*) AS order_count FROM orders GROUP BY month ORDER BY month"
+  },
+  {
+    "id": 6,
+    "question": "订单状态分布情况如何？",
+    "gold_sql": "SELECT status, COUNT(*) AS order_count FROM orders GROUP BY status"
+  },
+  {
+    "id": 7,
+    "question": "剔除已取消订单后，平均每笔订单金额是多少？",
+    "gold_sql": "SELECT ROUND(AVG(total_amount), 2) FROM orders WHERE status != 'cancelled'"
+  },
+  {
+    "id": 8,
+    "question": "下单次数最多的前5位用户是谁？",
+    "gold_sql": "SELECT u.name, COUNT(o.id) AS order_count FROM orders o JOIN users u ON o.user_id = u.id GROUP BY u.id ORDER BY order_count DESC LIMIT 5"
+  },
+  {
+    "id": 9,
+    "question": "注册后从未下过单的用户有多少个？",
+    "gold_sql": "SELECT COUNT(*) FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE o.id IS NULL"
+  },
+  {
+    "id": 10,
+    "question": "已取消订单占全部订单的百分比是多少？",
+    "gold_sql": "SELECT ROUND(SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) FROM orders"
+  },
+  {
+    "id": 11,
+    "question": "库存最少的5个商品是什么？",
+    "gold_sql": "SELECT name, stock FROM products ORDER BY stock ASC LIMIT 5"
+  },
+  {
+    "id": 12,
+    "question": "每个类目下有多少个商品？",
+    "gold_sql": "SELECT category, COUNT(*) AS product_count FROM products GROUP BY category"
+  },
+  {
+    "id": 13,
+    "question": "列出所有用户的姓名和手机号。",
+    "gold_sql": "SELECT name, phone FROM users"
+  },
+  {
+    "id": 14,
+    "question": "卖得最畅销（按销量计）的商品是哪个？",
+    "gold_sql": "SELECT p.name, SUM(oi.quantity) AS total_qty FROM order_items oi JOIN products p ON oi.product_id = p.id GROUP BY p.id ORDER BY total_qty DESC LIMIT 1"
+  },
+  {
+    "id": 15,
+    "question": "杭州用户在2025年下半年的订单总金额是多少？",
+    "gold_sql": "SELECT ROUND(SUM(o.total_amount), 2) FROM orders o JOIN users u ON o.user_id = u.id WHERE u.city = '杭州' AND o.order_date >= '2025-07-01'"
+  },
+  {
+    "id": 16,
+    "question": "平均每笔订单包含多少件商品？",
+    "gold_sql": "SELECT ROUND(AVG(total_qty), 2) FROM (SELECT SUM(quantity) AS total_qty FROM order_items GROUP BY order_id)"
+  },
+  {
+    "id": 17,
+    "question": "只下过一次单的用户有多少个？",
+    "gold_sql": "SELECT COUNT(*) FROM (SELECT user_id FROM orders GROUP BY user_id HAVING COUNT(*) = 1)"
+  },
+  {
+    "id": 18,
+    "question": "哪些商品的价格高于所有商品的平均价格？",
+    "gold_sql": "SELECT name, price FROM products WHERE price > (SELECT AVG(price) FROM products)"
+  },
+  {
+    "id": 19,
+    "question": "每个用户最近一次下单是什么时候？",
+    "gold_sql": "SELECT u.name, MAX(o.order_date) AS last_order_date FROM users u JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY last_order_date DESC"
+  },
+  {
+    "id": 20,
+    "question": "平台2025年的总销售额（GMV，不含已取消订单）是多少？",
+    "gold_sql": "SELECT ROUND(SUM(total_amount), 2) FROM orders WHERE status != 'cancelled'"
+  }
+]
