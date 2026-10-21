@@ -92,8 +92,10 @@ def build_graph(llm: LLMClient, schema_text: str, settings: Settings):
 
     def generate_sql(state: AgentState) -> dict:
         if over_budget():
+            # 直接置为最大尝试次数，让路由立刻走向 fail，不再进入校验/修复环节
             return {"status": "failed",
-                    "answer": "Token 预算已耗尽，服务已停止调用模型，请稍后再试。"}
+                    "error": "Token 预算已耗尽，服务已停止调用模型，请稍后再试。",
+                    "attempts": settings.sql_max_attempts}
         start = time.perf_counter()
         try:
             response = llm.chat(_sql_gen_messages(schema_text, state["question"]), json_mode=True)
@@ -112,6 +114,8 @@ def build_graph(llm: LLMClient, schema_text: str, settings: Settings):
                                detail=str(data.get("explanation", "")))}
 
     def validate_sql_node(state: AgentState) -> dict:
+        if state.get("status") == "failed":  # 上游已短路（如预算耗尽），直接放行到 fail
+            return {}
         report = validate_sql(state.get("sql", ""), settings.sensitive_columns, settings.max_rows)
         if not report.ok:
             return {"error": report.reason,
@@ -157,6 +161,11 @@ def build_graph(llm: LLMClient, schema_text: str, settings: Settings):
                                row_count=len(rows))}
 
     def repair_sql(state: AgentState) -> dict:
+        if over_budget():
+            return {"status": "failed",
+                    "error": "Token 预算已耗尽，服务已停止调用模型，请稍后再试。",
+                    "attempts": settings.sql_max_attempts,
+                    "steps": _step(state.get("steps", []), "repair_sql", skipped="budget_exhausted")}
         start = time.perf_counter()
         try:
             response = llm.chat(_repair_messages(schema_text, state), json_mode=True)
@@ -194,9 +203,12 @@ def build_graph(llm: LLMClient, schema_text: str, settings: Settings):
 
     def fail(state: AgentState) -> dict:
         return {"status": "failed",
-                "answer": f"查询失败：{state.get('error', '未知错误')}（已尝试 {state.get('attempts', 0)} 次生成）"}
+                "answer": state.get("answer")
+                or f"查询失败：{state.get('error', '未知错误')}（已尝试 {state.get('attempts', 0)} 次生成）"}
 
     def route_after_validate(state: AgentState) -> Literal["approval", "execute", "repair", "fail"]:
+        if state.get("status") == "failed":
+            return "fail"
         if state.get("error"):
             return "fail" if state.get("attempts", 0) >= settings.sql_max_attempts else "repair"
         return "approval" if state.get("needs_approval") else "execute"

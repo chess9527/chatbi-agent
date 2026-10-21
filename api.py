@@ -3,7 +3,7 @@ import time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from chatbi.config import get_settings
 from chatbi.database import fetch_schema
@@ -25,6 +25,14 @@ def get_agent() -> ChatBIAgent:
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
+
+    @field_validator("question")
+    @classmethod
+    def strip_and_check(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("问题不能为空白")
+        return value
 
 
 class ApproveRequest(BaseModel):

@@ -53,7 +53,8 @@ class LLMClient:
 
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or get_settings()
-        self._client = OpenAI(api_key=self.settings.llm_api_key, base_url=self.settings.llm_api_base)
+        self._client = OpenAI(api_key=self.settings.llm_api_key, base_url=self.settings.llm_api_base,
+                              max_retries=self.settings.max_retries)
         self._breaker = CircuitBreaker(self.settings.breaker_failure_threshold,
                                        self.settings.breaker_cooldown_seconds)
         self.total_prompt_tokens = 0
